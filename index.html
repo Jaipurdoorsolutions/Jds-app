@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0f172a">
 
 <!-- PWA Manifest & App Config -->
-<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Jaipur%20Door%20Solutions%22%2C%22short_name%22%3A%22JDS%20Survey%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f172a%22%2C%22theme_color%22%3A%22%230f172a%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22logo.png%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D">
+<link rel="manifest" href="manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -344,7 +344,7 @@
       </div>
     </div>
 
-    <!-- TAB 3: MY SURVEYS (CLEAN UI WITHOUT SYNC BUTTON OR EXTRA TEXT) -->
+    <!-- TAB 3: MY SURVEYS -->
     <div id="tab-records" class="hidden space-y-3">
       <div class="bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
         <div>
@@ -393,7 +393,7 @@
   </div>
 
 <script>
-  // Service Worker for 100% Offline Support + Instant Auto-Update
+  // Chrome Native PWA Installation Support
   let deferredPrompt;
   const pwaInstallBtn = document.getElementById('pwa-install-btn');
 
@@ -420,62 +420,9 @@
     showToast('App installed successfully!');
   });
 
+  // Dedicated sw.js Registration for GitHub Pages
   if ('serviceWorker' in navigator) {
-    const swCode = `
-      const CACHE_NAME = 'jds-cache-v3';
-      const ASSETS = [
-        './',
-        'https://cdn.tailwindcss.com',
-        'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
-        'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap'
-      ];
-
-      self.addEventListener('install', (event) => {
-        self.skipWaiting();
-        event.waitUntil(
-          caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS).catch(() => {}))
-        );
-      });
-
-      self.addEventListener('activate', (event) => {
-        event.waitUntil(
-          caches.keys().then((keys) => {
-            return Promise.all(
-              keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-            );
-          }).then(() => self.clients.claim())
-        );
-      });
-
-      self.addEventListener('fetch', (event) => {
-        if (event.request.method !== 'GET') return;
-        
-        if (event.request.url.includes('firestore.googleapis.com') || event.request.url.includes('identitytoolkit')) {
-          return;
-        }
-
-        event.respondWith(
-          caches.match(event.request).then((cachedResponse) => {
-            const fetchPromise = fetch(event.request).then((networkResponse) => {
-              if (networkResponse && networkResponse.status === 200) {
-                const responseToCache = networkResponse.clone();
-                caches.open(CACHE_NAME).then((cache) => {
-                  cache.put(event.request, responseToCache);
-                });
-              }
-              return networkResponse;
-            }).catch(() => cachedResponse);
-
-            return cachedResponse || fetchPromise;
-          })
-        );
-      });
-    `;
-
-    const blob = new Blob([swCode], { type: 'application/javascript' });
-    const swUrl = URL.createObjectURL(blob);
-
-    navigator.serviceWorker.register(swUrl).then((reg) => {
+    navigator.serviceWorker.register('./sw.js').then((reg) => {
       reg.addEventListener('updatefound', () => {
         const newWorker = reg.installing;
         newWorker.addEventListener('statechange', () => {
@@ -484,7 +431,7 @@
           }
         });
       });
-    }).catch(err => console.log('SW registration note:', err));
+    }).catch(err => console.log('SW Registration notice:', err));
 
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -594,7 +541,7 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // Automatic Door Open-Close Simulator Preview on Selection
+  // Auto 3D Door Preview
   function triggerAutoDoorPreview() {
     if (autoPreviewTimeout) clearTimeout(autoPreviewTimeout);
     const spec = doorSpecs[activeStyle][activeAction];
@@ -602,18 +549,15 @@
     const isPush = spec.isPush;
     const sign = isRight ? (isPush ? -1 : 1) : (isPush ? 1 : -1);
 
-    // Open smoothly
     animTargetAngle = sign * 1.45;
     syncDoorControls(90);
 
-    // Auto close after 1.1 seconds
     autoPreviewTimeout = setTimeout(() => {
       animTargetAngle = 0;
       syncDoorControls(0);
     }, 1100);
   }
 
-  // Combined Style and Action Selection
   function selectStyleAndAction(style, action) {
     activeStyle = style;
     activeAction = action;
@@ -775,7 +719,7 @@
       </div>`;
   }
 
-  // EXACT ORIGINAL 3D ENGINE
+  // 3D Scene Initializer
   let scene3D, camera3D, renderer3D, doorPivot3D, doorLeafMesh, handleMesh;
   let animTargetAngle = 0;
   let animCurrentAngle = 0;
@@ -1188,7 +1132,7 @@
     switchMainTab('survey');
   }
 
-  // MY SURVEYS SAVE & AUTOMATIC FIREBASE SYNC
+  // Automatic Firebase Sync
   async function saveActiveSurveyToRecords(showRedirect = true) {
     if (!currentUser) { checkAuth(); return null; }
     const activeEntries = surveyRows.filter(r => r.location || r.opening || r.qty || r.width);
@@ -1216,7 +1160,7 @@
     mySurveys.unshift(surveyData);
     localStorage.setItem(storageKey, JSON.stringify(mySurveys));
 
-    // AUTOMATIC FIREBASE SYNC IN BACKGROUND
+    // AUTOMATIC FIREBASE SYNC
     if (window.jdsCloud) {
       window.jdsCloud.saveSurvey(surveyData).catch(err => {
         console.warn('Firebase auto sync retry later:', err);
@@ -1417,7 +1361,6 @@
   }
 
   function printCurrentSheet(isBlank = false) {
-    // If printing filled sheet, automatically save to My Surveys & Auto Sync to Firebase first
     if (!isBlank) {
       saveActiveSurveyToRecords(false);
     }
