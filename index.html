@@ -7,10 +7,11 @@
 <meta name="theme-color" content="#0f172a">
 
 <!-- PWA Manifest & App Config -->
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="./manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="logo.png">
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -131,7 +132,7 @@
         <div class="text-[9.5px] font-mono bg-black/30 px-2 py-0.5 rounded text-red-100 border border-white/20">Outside Ref.</div>
       </div>
 
-      <!-- ULTRA COMPACT OPENING STYLE CARDS (Screen Fit) -->
+      <!-- ULTRA COMPACT OPENING STYLE CARDS -->
       <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
         <div class="flex items-center justify-between mb-1.5 px-0.5">
           <span class="text-[10px] font-bold uppercase tracking-wider text-slate-700">1. Select Opening Style</span>
@@ -194,7 +195,7 @@
         </div>
       </div>
 
-      <!-- 3D MODEL VIEW (COMPACT SCREEN FIT) -->
+      <!-- 3D MODEL VIEW (EDGE-TO-EDGE DESKTOP + MOBILE FIT) -->
       <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm space-y-2">
         <div class="flex items-center justify-between gap-2">
           <div class="min-w-0">
@@ -207,7 +208,7 @@
             Open Door
           </button>
         </div>
-        <div id="threejs-canvas-box" class="w-full h-56 sm:h-72 bg-slate-200 rounded-xl relative overflow-hidden flex items-center justify-center border border-slate-300 shadow-inner">
+        <div id="threejs-canvas-box" class="w-full h-56 sm:h-72 md:h-80 bg-slate-200 rounded-xl relative overflow-hidden flex items-center justify-center border border-slate-300 shadow-inner">
           <div id="live-3d-tag" class="absolute top-2 right-2 bg-amber-400 text-slate-950 text-[9px] font-black px-2.5 py-1 rounded shadow z-10">STYLE A : PUSH - RHS</div>
           <div class="absolute bottom-2 right-2 bg-white/90 text-slate-600 text-[8px] font-bold px-1.5 py-0.5 rounded z-10 shadow">3D VIEW · NOT TO SCALE</div>
         </div>
@@ -394,13 +395,16 @@
 
 <script>
   // Chrome Native PWA Installation Support
-  let deferredPrompt;
+  let deferredPrompt = null;
   const pwaInstallBtn = document.getElementById('pwa-install-btn');
 
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    if (pwaInstallBtn) pwaInstallBtn.classList.remove('hidden');
+    if (pwaInstallBtn) {
+      pwaInstallBtn.classList.remove('hidden');
+      pwaInstallBtn.classList.add('inline-flex');
+    }
   });
 
   function triggerPwaInstall() {
@@ -412,26 +416,30 @@
         }
         deferredPrompt = null;
       });
+    } else {
+      showToast('Install option browser menu (3-dots) me available hai');
     }
   }
 
   window.addEventListener('appinstalled', () => {
     if (pwaInstallBtn) pwaInstallBtn.classList.add('hidden');
-    showToast('App installed successfully!');
+    showToast('App successfully installed!');
   });
 
   // Dedicated sw.js Registration for GitHub Pages
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').then((reg) => {
-      reg.addEventListener('updatefound', () => {
-        const newWorker = reg.installing;
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            window.location.reload();
-          }
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js', { scope: './' }).then((reg) => {
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              window.location.reload();
+            }
+          });
         });
-      });
-    }).catch(err => console.log('SW Registration notice:', err));
+      }).catch(err => console.log('SW Registration notice:', err));
+    });
 
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -719,7 +727,7 @@
       </div>`;
   }
 
-  // 3D Scene Initializer
+  // 3D Scene Initializer (Full-Coverage Background for Mobile & Desktop)
   let scene3D, camera3D, renderer3D, doorPivot3D, doorLeafMesh, handleMesh;
   let animTargetAngle = 0;
   let animCurrentAngle = 0;
@@ -735,10 +743,9 @@
     const h = Math.max(container.clientHeight, 220);
 
     scene3D = new THREE.Scene();
-    scene3D.background = new THREE.Color(0xf4f6f8);
-    scene3D.fog = new THREE.Fog(0xf4f6f8, 12, 24);
+    scene3D.background = new THREE.Color(0xf1f5f9);
 
-    camera3D = new THREE.PerspectiveCamera(27, w / h, 0.1, 60);
+    camera3D = new THREE.PerspectiveCamera(27, w / h, 0.1, 80);
     camera3D.position.set(0, 1.92, 6.15);
     camera3D.lookAt(0, 1.12, 0.05);
 
@@ -748,7 +755,7 @@
       container.innerHTML = '<div class="p-5 text-center text-sm font-bold text-slate-700">3D view not available.</div>';
       return;
     }
-    renderer3D.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    renderer3D.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer3D.setSize(w, h);
     renderer3D.shadowMap.enabled = true;
     renderer3D.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -793,7 +800,7 @@
       }
       const tex = new THREE.CanvasTexture(c);
       tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      tex.repeat.set(1.35, 1);
+      tex.repeat.set(2.4, 1);
       tex.anisotropy = 4;
       tex.encoding = THREE.sRGBEncoding;
       return tex;
@@ -816,7 +823,7 @@
       for (let y = 0; y <= 512; y += tile) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(512,y); ctx.stroke(); }
       const tex = new THREE.CanvasTexture(c);
       tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      tex.repeat.set(3.2, 3.0);
+      tex.repeat.set(6.4, 3.0);
       tex.anisotropy = 4;
       tex.encoding = THREE.sRGBEncoding;
       return tex;
@@ -846,19 +853,21 @@
     fillLight.position.set(4, 4, -4);
     scene3D.add(fillLight);
 
-    const roomFloor = new THREE.Mesh(new THREE.PlaneGeometry(7, 4.4), roomFloorMat);
+    // Full-coverage wide floors for desktop wide aspect ratio
+    const roomFloor = new THREE.Mesh(new THREE.PlaneGeometry(16, 5.5), roomFloorMat);
     roomFloor.rotation.x = -Math.PI / 2;
-    roomFloor.position.set(0, 0, -2.05);
+    roomFloor.position.set(0, 0, -2.6);
     roomFloor.receiveShadow = true;
     scene3D.add(roomFloor);
 
-    const corridorFloor = new THREE.Mesh(new THREE.PlaneGeometry(7, 4.2), corridorFloorMat);
+    const corridorFloor = new THREE.Mesh(new THREE.PlaneGeometry(16, 5.5), corridorFloorMat);
     corridorFloor.rotation.x = -Math.PI / 2;
-    corridorFloor.position.set(0, -0.006, 2.05);
+    corridorFloor.position.set(0, -0.006, 2.6);
     corridorFloor.receiveShadow = true;
     scene3D.add(corridorFloor);
 
-    const wallHeight = 2.72, wallDepth = 0.24, openingW = 1.18, pierW = 1.36;
+    // Extended wide brick walls so desktop sides are 100% filled
+    const wallHeight = 2.72, wallDepth = 0.24, openingW = 1.18, pierW = 3.6;
     const leftPier = new THREE.Mesh(new THREE.BoxGeometry(pierW, wallHeight, wallDepth), wallMat);
     leftPier.position.set(-(openingW / 2 + pierW / 2), wallHeight / 2, 0);
     leftPier.castShadow = true; leftPier.receiveShadow = true; scene3D.add(leftPier);
@@ -871,8 +880,8 @@
     lintelWall.position.set(0, 2.18 + (wallHeight - 2.18) / 2, 0);
     lintelWall.castShadow = true; lintelWall.receiveShadow = true; scene3D.add(lintelWall);
 
-    const backWall = new THREE.Mesh(new THREE.BoxGeometry(2.72, 2.72, 0.16), sideWallMat);
-    backWall.position.set(0, 1.36, -2.78);
+    const backWall = new THREE.Mesh(new THREE.BoxGeometry(10, 2.72, 0.16), sideWallMat);
+    backWall.position.set(0, 1.36, -3.2);
     backWall.castShadow = true; backWall.receiveShadow = true; scene3D.add(backWall);
 
     const threshold = new THREE.Mesh(new THREE.BoxGeometry(1.22, 0.055, 0.38), concreteMat);
