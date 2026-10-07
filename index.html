@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0f172a">
 
 <!-- PWA Manifest & App Config -->
-<link rel="manifest" href="./manifest.json">
+<link rel="manifest" href="manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -95,7 +95,7 @@
     </div>
   </div>
 
-  <!-- HEADER -->
+  <!-- HEADER (Updated: JDS SiteSurvey subtitle + Surveyor Name on Right) -->
   <header class="bg-slate-900 text-white border-b-2 border-amber-500 sticky top-0 z-40 shadow-sm no-print">
     <div class="max-w-4xl mx-auto px-4 py-2 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -105,7 +105,7 @@
         </div>
         <div>
           <h1 class="text-sm font-extrabold tracking-wide text-white uppercase leading-tight">Jaipur Door Solutions</h1>
-          <p id="top-user-indicator" class="text-[10px] text-amber-400 font-bold capitalize">Surveyor</p>
+          <p class="text-[10px] text-amber-400 font-bold uppercase tracking-wider">JDS SiteSurvey</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -113,9 +113,11 @@
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
           Install App
         </button>
-        <span id="sync-status-indicator" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Online Sync
-        </span>
+        <!-- User Name on Right Side -->
+        <div class="flex items-center gap-1.5 bg-slate-800/90 border border-amber-500/30 px-2.5 py-1 rounded-lg">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span id="top-user-indicator" class="text-[11px] text-amber-300 font-extrabold capitalize">Surveyor</span>
+        </div>
       </div>
     </div>
   </header>
@@ -195,7 +197,7 @@
         </div>
       </div>
 
-      <!-- 3D MODEL VIEW (EDGE-TO-EDGE DESKTOP + MOBILE FIT) -->
+      <!-- 3D MODEL VIEW -->
       <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm space-y-2">
         <div class="flex items-center justify-between gap-2">
           <div class="min-w-0">
@@ -429,7 +431,7 @@
   // Dedicated sw.js Registration for GitHub Pages
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js', { scope: './' }).then((reg) => {
+      navigator.serviceWorker.register('sw.js', { scope: './' }).then((reg) => {
         reg.addEventListener('updatefound', () => {
           const newWorker = reg.installing;
           newWorker.addEventListener('statechange', () => {
@@ -473,7 +475,8 @@
       document.getElementById('auth-modal').classList.remove('hidden');
     } else {
       document.getElementById('auth-modal').classList.add('hidden');
-      document.getElementById('top-user-indicator').innerText = currentUser.name;
+      const topName = document.getElementById('top-user-indicator');
+      if (topName) topName.innerText = currentUser.name;
       loadUserSurveys();
       listenForBroadcasts();
       if (window.jdsCloud) window.jdsCloud.waitUntilReady().then(() => syncLocalWithCloudSilently()).catch(err => console.warn('Initial JDS cloud sync:', err));
@@ -727,7 +730,7 @@
       </div>`;
   }
 
-  // 3D Scene Initializer (Full-Coverage Background for Mobile & Desktop)
+  // 3D Scene Initializer
   let scene3D, camera3D, renderer3D, doorPivot3D, doorLeafMesh, handleMesh;
   let animTargetAngle = 0;
   let animCurrentAngle = 0;
@@ -853,7 +856,6 @@
     fillLight.position.set(4, 4, -4);
     scene3D.add(fillLight);
 
-    // Full-coverage wide floors for desktop wide aspect ratio
     const roomFloor = new THREE.Mesh(new THREE.PlaneGeometry(16, 5.5), roomFloorMat);
     roomFloor.rotation.x = -Math.PI / 2;
     roomFloor.position.set(0, 0, -2.6);
@@ -866,7 +868,6 @@
     corridorFloor.receiveShadow = true;
     scene3D.add(corridorFloor);
 
-    // Extended wide brick walls so desktop sides are 100% filled
     const wallHeight = 2.72, wallDepth = 0.24, openingW = 1.18, pierW = 3.6;
     const leftPier = new THREE.Mesh(new THREE.BoxGeometry(pierW, wallHeight, wallDepth), wallMat);
     leftPier.position.set(-(openingW / 2 + pierW / 2), wallHeight / 2, 0);
@@ -1169,7 +1170,6 @@
     mySurveys.unshift(surveyData);
     localStorage.setItem(storageKey, JSON.stringify(mySurveys));
 
-    // AUTOMATIC FIREBASE SYNC
     if (window.jdsCloud) {
       window.jdsCloud.saveSurvey(surveyData).catch(err => {
         console.warn('Firebase auto sync retry later:', err);
@@ -1475,22 +1475,6 @@
   const ready = new Promise((resolve, reject) => { readyResolve = resolve; readyReject = reject; });
   let broadcastUnsubscribe = null;
 
-  function setSyncStatus(state, label) {
-    const el = document.getElementById('sync-status-indicator');
-    if (!el) return;
-    const styles = state === 'online'
-      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-      : state === 'pending'
-        ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-        : 'bg-slate-500/20 text-slate-300 border-slate-500/30';
-    const dot = state === 'online' ? 'bg-emerald-400' : state === 'pending' ? 'bg-amber-400' : 'bg-slate-400';
-    el.className = `inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold border ${styles}`;
-    el.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${dot}"></span> ${label}`;
-  }
-
-  window.addEventListener('online', () => setSyncStatus('pending', 'Cloud reconnecting'));
-  window.addEventListener('offline', () => setSyncStatus('offline', 'Offline · Saved locally'));
-
   try {
     const app = initializeApp(firebaseConfig, 'jaipurDoorSolutionsSharedProject');
     try {
@@ -1498,14 +1482,10 @@
         localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
       });
     } catch (cacheError) {
-      console.warn('Persistent Firestore cache unavailable; using standard Firestore:', cacheError);
       db = getFirestore(app);
     }
-    setSyncStatus(navigator.onLine ? 'pending' : 'offline', navigator.onLine ? 'Cloud ready' : 'Offline · Saved locally');
     readyResolve();
   } catch (error) {
-    console.error('Firebase initialization failed:', error);
-    setSyncStatus('offline', 'Cloud unavailable');
     readyReject(error);
   }
 
@@ -1518,7 +1498,6 @@
         recordType: 'user', name: user.name, phone: user.phone,
         lastActive: new Date().toISOString()
       }, { merge: true });
-      setSyncStatus('online', 'Online Sync');
     },
     async saveSurvey(survey) {
       await ready;
@@ -1526,24 +1505,18 @@
         ...survey, recordType: 'survey', cloudCollection: COLLECTION_NAME,
         updatedAt: new Date().toISOString()
       }, { merge: true });
-      setSyncStatus('online', 'Online Sync');
     },
     async getUserSurveys(phone) {
       await ready;
       const q = query(jdsCollection(), where('recordType', '==', 'survey'), where('userPhone', '==', phone));
       const snap = await getDocs(q);
-      setSyncStatus('online', 'Online Sync');
       return snap.docs.map(d => d.data()).filter(d => d && d.id);
     },
     listenForBroadcast(callback) {
       ready.then(() => {
         if (broadcastUnsubscribe) broadcastUnsubscribe();
         broadcastUnsubscribe = onSnapshot(doc(db, COLLECTION_NAME, 'broadcast_current'), snap => {
-          setSyncStatus(navigator.onLine ? 'online' : 'offline', navigator.onLine ? 'Online Sync' : 'Offline · Saved locally');
           if (snap.exists()) callback(snap.data());
-        }, err => {
-          console.warn('JDS broadcast listener:', err);
-          setSyncStatus('pending', 'Sync pending');
         });
       }).catch(err => console.warn('JDS broadcast listener not started:', err));
     }
